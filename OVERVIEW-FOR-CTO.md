@@ -246,11 +246,13 @@ cd /root/.claude/mcp-server && npm run build && node dist/index.js
 
 | Metric | Value |
 |--------|-------|
+| Source Files | 103 |
+| Lines of Code | 12,360 |
 | MCP Tools | 35+ |
 | Skills | 4 |
 | Workflows | 5 |
+| Integrations | 11 |
 | Context Files | 4 core + extensible |
-| Lines of Code | ~5000 TypeScript |
 
 ---
 
