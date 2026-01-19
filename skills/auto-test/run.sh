@@ -170,6 +170,9 @@ test_integrations() {
         [ ! -f "$file" ] && continue
         local name=$(basename "$file" .ts)
 
+        # Skip index/barrel files
+        [ "$name" = "index" ] && continue
+
         # Check for required exports (isAuthenticated or similar)
         if grep -qE "export (async )?function|export const" "$file" 2>/dev/null; then
             valid=$((valid + 1))
