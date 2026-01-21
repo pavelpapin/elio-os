@@ -100,14 +100,19 @@
 
 ### Stage 2: Architecture Review
 
-**Questions:**
-1. Есть ли компоненты без observability?
-2. Есть ли single points of failure?
-3. Есть ли захардкоженные значения которые должны быть в config?
-4. Есть ли файлы > 200 строк которые нужно разбить?
+**Read first:** `/root/.claude/team/cto/CODE_REVIEW_STANDARDS.md`
+
+**Check for:**
+1. **Separation of Concerns** — файл делает > 1 вещи?
+2. **Single Responsibility** — функция > 50 строк? файл > 200 строк?
+3. **Dependency Inversion** — прямые зависимости вместо интерфейсов?
+4. **Code Duplication** — повторяющийся код?
+5. **Error Handling** — silent catch, missing try/catch?
+6. **Observability** — логи, метрики?
+7. **TypeScript Quality** — any, as, !?
 
 **Actions:**
-1. Сканировать codebase на architectural issues
+1. Сканировать codebase на issues из CODE_REVIEW_STANDARDS
 2. Проверить соответствие AGENT_STANDARDS.md
 3. Найти tech debt
 

@@ -315,8 +315,8 @@ curl $SUPABASE_URL/rest/v1/
 
 | Metric | Value |
 |--------|-------|
-| TypeScript Files | 5,350+ |
-| Lines of Code | 149,000+ (MCP server) |
+| Lines of Code | ~34,000 (собственный код) |
+| MCP Server | ~13,400 lines |
 | MCP Adapters | 16 |
 | MCP Tools | 50+ |
 | Skills | 8 |
