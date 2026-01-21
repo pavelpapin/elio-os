@@ -257,7 +257,34 @@ Check with multiple models (Claude, GPT-4, Groq) and:
 
 ---
 
-### Stage 8: Deliver
+### Stage 8: GitHub Sync
+
+**CRITICAL:** Все изменения должны быть запушены в GitHub!
+
+**Actions:**
+1. `git status` — проверить что есть uncommitted changes
+2. `git add -A && git commit` — закоммитить с описательным message
+3. `git push origin main` — запушить в remote
+
+**Commit message format:**
+```
+type: Short description
+
+- Detail 1
+- Detail 2
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+**Types:** feat, fix, refactor, docs, chore, style
+
+**Verification:**
+- После push проверить что remote обновился
+- Если push failed — логировать ошибку и escalate
+
+---
+
+### Stage 9: Deliver
 
 **Actions:**
 1. Сохранить в Notion (database: Nightly CTO Reports)
