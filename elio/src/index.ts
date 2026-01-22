@@ -2,7 +2,7 @@
  * Elio Core - Main exports
  */
 
-export * from './types';
-export * as memory from './managers/memory';
-export * as jobs from './managers/jobs';
-export * as skills from './managers/skills';
+export * from './types/index.js'
+export * as memory from './managers/memory.js'
+export * as jobs from './managers/jobs.js'
+export * as skills from './managers/skills.js'

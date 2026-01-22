@@ -81,6 +81,17 @@ export {
 } from './health/index.js'
 export type { HealthCheckResult, SystemHealth } from './health/index.js'
 
+// Progress Reporter (unified progress via Redis Streams)
+export {
+  ProgressReporter,
+  createProgressReporter,
+} from './progress/index.js'
+export type {
+  ProgressState,
+  ProgressStage,
+  ProgressReporterConfig,
+} from './progress/index.js'
+
 // Errors
 export {
   WorkflowError,

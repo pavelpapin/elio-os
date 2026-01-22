@@ -1,7 +1,8 @@
 {
   "name": "@elio/core",
-  "version": "1.0.0",
-  "description": "Elio OS Core - Job Manager, Memory Manager, Skills",
+  "version": "2.0.0",
+  "description": "Elio OS Core - Job Manager via BullMQ, Memory Manager, Skills",
+  "type": "module",
   "main": "dist/index.js",
   "bin": {
     "elio": "./dist/cli.js"
@@ -13,10 +14,15 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["ai", "agents", "skills", "memory"],
+  "keywords": ["ai", "agents", "skills", "memory", "bullmq"],
   "author": "Pasha",
   "license": "MIT",
+  "dependencies": {
+    "@elio/workflow": "workspace:*"
+  },
   "devDependencies": {
-    "tsx": "^4.21.0"
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.0"
   }
 }

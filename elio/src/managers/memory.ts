@@ -3,11 +3,11 @@
  * Persistent knowledge storage
  */
 
-import * as path from 'path';
-import * as crypto from 'crypto';
-import { Fact, Person, Project } from '../types';
-import { FACTS_FILE, PEOPLE_DIR, PROJECTS_DIR } from '../utils/paths';
-import { readJson, writeJson, appendJsonl, readJsonl, listJsonFiles, safeName, ensureDir } from '../utils/fs';
+import * as path from 'path'
+import * as crypto from 'crypto'
+import type { Fact, Person, Project } from '../types/index.js'
+import { FACTS_FILE, PEOPLE_DIR, PROJECTS_DIR } from '../utils/paths.js'
+import { readJson, writeJson, appendJsonl, readJsonl, listJsonFiles, safeName, ensureDir } from '../utils/fs.js'
 
 function generateId(): string {
   return crypto.randomUUID();

@@ -7,6 +7,9 @@
 import { createServer } from 'http';
 import * as linkedin from '../integrations/linkedin/index.js';
 import * as clay from '../integrations/clay/index.js';
+import { createFileLogger } from '../utils/file-logger.js';
+
+const logger = createFileLogger('linkedin-api');
 
 const PORT = 3100;
 const API_KEY = process.env.ELIO_API_KEY || 'elio-linkedin-2024';
@@ -121,7 +124,7 @@ export function startServer() {
       req.on('end', () => {
         try {
           const data = JSON.parse(body);
-          console.log('[Clay Callback] Received:', JSON.stringify(data, null, 2));
+          logger.info('Clay callback received', data);
           const result = clay.handleCallback(data);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result));
@@ -201,8 +204,8 @@ export function startServer() {
   });
 
   server.listen(PORT, () => {
-    console.log(`[LinkedIn API] Server running on http://localhost:${PORT}`);
-    console.log(`[LinkedIn API] Use POST /enrich with X-API-Key header`);
+    logger.info(`Server running on http://localhost:${PORT}`);
+    logger.info('Use POST /enrich with X-API-Key header');
   });
 
   return server;

@@ -5,6 +5,7 @@
 
 import { createAgentExecutionWorker } from './workers/agentExecution.js'
 import { createScheduledTaskWorker } from './workers/scheduledTask.js'
+import { createSkillExecutionWorker } from './workers/skillExecution.js'
 import {
   checkRedisHealth,
   checkAllRedisHealth,
@@ -48,11 +49,13 @@ async function main(): Promise<void> {
   const workers = [
     createAgentExecutionWorker(config),
     createScheduledTaskWorker(notifyTelegram, config),
+    createSkillExecutionWorker(config),
   ]
 
   console.log(`[Worker] Started ${workers.length} workers:`)
   console.log('  - agent-execution (concurrency: 4)')
   console.log('  - scheduled-tasks (concurrency: 2)')
+  console.log('  - skill-execution (concurrency: 4)')
 
   // Run initial cleanup and start periodic cleanup
   console.log('[Worker] Running initial stream cleanup...')

@@ -4,6 +4,9 @@
  */
 
 import * as https from 'https';
+import { createFileLogger } from '../utils/file-logger.js';
+
+const logger = createFileLogger('external-models');
 
 // API Keys from environment
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -82,7 +85,7 @@ export async function callOpenAI(
         const latency_ms = Date.now() - startTime;
 
         if (res.statusCode !== 200) {
-          console.log('OpenAI API error:', res.statusCode, data.slice(0, 200));
+          logger.warn('OpenAI API error', { statusCode: res.statusCode, response: data.slice(0, 200) });
           resolve({ model, response: '', latency_ms, error: `OpenAI error: ${res.statusCode}` });
           return;
         }
@@ -91,7 +94,7 @@ export async function callOpenAI(
           const json = JSON.parse(data);
           const response = json.choices?.[0]?.message?.content || '';
           const usage = json.usage;
-          console.log(`OpenAI ${model}: ${latency_ms}ms, ${response.length} chars`);
+          logger.info(`OpenAI ${model} completed`, { latency_ms, chars: response.length });
           resolve({ model, response, usage, latency_ms });
         } catch (e) {
           resolve({ model, response: '', latency_ms, error: 'Parse error' });
@@ -165,7 +168,7 @@ export async function callGroq(
         try {
           const json = JSON.parse(data);
           const response = json.choices?.[0]?.message?.content || '';
-          console.log(`Groq ${model}: ${latency_ms}ms, ${response.length} chars`);
+          logger.info(`Groq ${model} completed`, { latency_ms, chars: response.length });
           resolve({ model, response, latency_ms });
         } catch (e) {
           resolve({ model, response: '', latency_ms, error: 'Parse error' });
