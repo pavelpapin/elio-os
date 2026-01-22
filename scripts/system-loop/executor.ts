@@ -72,8 +72,15 @@ export async function runCollectorScript(item: SchedulableItem): Promise<RunResu
   const startTime = Date.now()
   const workflowName = item.config.workflow as string
 
-  // Map workflow name to script
-  const scriptPath = `/root/.claude/scripts/${workflowName}.ts`
+  // Map workflow name to script - support both full paths and simple names
+  let scriptPath: string
+  if (workflowName.startsWith('scripts/') || workflowName.startsWith('/')) {
+    // Full path provided (e.g., "scripts/sync-backlog-to-notion.ts")
+    scriptPath = workflowName.startsWith('/') ? workflowName : `/root/.claude/${workflowName}`
+  } else {
+    // Simple name (e.g., "day-review") - look in scripts/
+    scriptPath = `/root/.claude/scripts/${workflowName}.ts`
+  }
 
   if (!fs.existsSync(scriptPath)) {
     log(`Collector script not found: ${scriptPath}`, 'error')

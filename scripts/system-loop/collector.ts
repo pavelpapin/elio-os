@@ -83,15 +83,18 @@ export function collectItems(): SchedulableItem[] {
   })
 
   for (const schedule of schedulesConfig.schedules) {
+    // Determine type: script-based schedules are treated as collectors
+    const isScript = !!schedule.script
     items.push({
       id: `workflow:${schedule.name}`,
-      type: 'workflow',
+      type: isScript ? 'collector' : 'workflow',
       name: schedule.description || schedule.name,
       cron: schedule.cron,
       timezone: schedule.timezone || 'UTC',
       enabled: schedule.enabled,
       config: {
-        workflow: schedule.workflow,
+        workflow: isScript ? schedule.script : schedule.workflow,
+        script: schedule.script,
         ...schedule.config,
         verification: schedule.verification
       }

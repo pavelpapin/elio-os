@@ -56,7 +56,8 @@ export interface TeamConfig {
 export interface ScheduledWorkflow {
   name: string
   description: string
-  workflow: string
+  workflow?: string
+  script?: string
   frequency: string
   cron: string
   timezone: string
