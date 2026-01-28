@@ -85,9 +85,18 @@ export default function Home() {
       {/* Meet Elio - Hero mockup layout */}
       <section id="how" className="relative py-20 sm:py-32 overflow-hidden">
         <div className="max-w-[1400px] mx-auto px-6 sm:px-10">
-          <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-8 lg:gap-0 items-center">
-            {/* Text content - left side */}
-            <div className="relative z-10 lg:pr-8">
+          <div className="relative min-h-[500px] lg:min-h-[600px]">
+            {/* Mockup - positioned behind, starts from left-center */}
+            <FadeIn delay={300} variant="scale">
+              <div className="hidden lg:block absolute top-1/2 -translate-y-1/2 left-[20%] right-[-10%]">
+                <PerspectiveFrame heroMode fadeDirection="left-bottom">
+                  <OwnerDashboardMockup />
+                </PerspectiveFrame>
+              </div>
+            </FadeIn>
+
+            {/* Text content - on top */}
+            <div className="relative z-10 max-w-[500px]">
               <FadeIn variant="none">
                 <SectionLabel>Meet Elio</SectionLabel>
               </FadeIn>
@@ -97,120 +106,163 @@ export default function Home() {
                 </h2>
               </FadeIn>
               <FadeIn delay={200}>
-                <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[42ch]">
+                <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[38ch]">
                   Connects to WhatsApp conversations in real deals.
                   Shows where money is being made, delayed, or lost.
                 </p>
               </FadeIn>
             </div>
 
-            {/* Mockup - right side, overlapping */}
-            <FadeIn delay={300} variant="scale">
-              <div className="relative lg:absolute lg:right-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[75%] lg:-mr-[15%]">
-                <PerspectiveFrame heroMode fadeDirection="left-bottom">
-                  <OwnerDashboardMockup />
-                </PerspectiveFrame>
-              </div>
+            {/* Mobile mockup - below text */}
+            <FadeIn delay={300} variant="scale" className="lg:hidden mt-12">
+              <PerspectiveFrame fadeDirection="bottom">
+                <OwnerDashboardMockup />
+              </PerspectiveFrame>
             </FadeIn>
           </div>
         </div>
       </section>
 
       {/* VALUE BLOCK 1: Deal Visibility */}
-      <Section>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          <div>
-            <FadeIn variant="none"><SectionLabel>Deal visibility</SectionLabel></FadeIn>
-            <FadeIn delay={80} variant="blur">
-              <h2 className="text-gradient text-[28px] sm:text-[48px] font-medium leading-[1.1] tracking-[-0.03em] max-w-[18ch]">
-                See every deal. Know who moves next.
-              </h2>
-            </FadeIn>
-            <FadeIn delay={160}>
-              <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[48ch]">
-                Lead score, deal stage, deal health, and last action — all in one view.
-                Always know who owes the next move.
-              </p>
-            </FadeIn>
-            <FadeIn delay={240}>
-              <div className="mt-8 flex flex-wrap gap-3">
-                {["Lead score", "Deal stage", "Deal health", "Last action"].map((tag) => (
-                  <span key={tag} className="text-[12px] text-white/30 bg-white/[0.04] px-3 py-1.5 rounded-full border border-white/[0.06]">
-                    {tag}
-                  </span>
-                ))}
+      <section className="relative py-20 sm:py-28 overflow-hidden">
+        <div className="max-w-[1400px] mx-auto px-6 sm:px-10">
+          <div className="relative min-h-[400px] lg:min-h-[450px]">
+            {/* Mockup - positioned behind */}
+            <FadeIn delay={200} variant="scale">
+              <div className="hidden lg:block absolute top-1/2 -translate-y-1/2 left-[25%] right-[-8%]">
+                <PerspectiveFrame fadeDirection="left-bottom">
+                  <DealVisibilityMockup />
+                </PerspectiveFrame>
               </div>
             </FadeIn>
-          </div>
-          <FadeIn delay={300} variant="scale">
-            <DealVisibilityMockup />
-          </FadeIn>
-        </div>
-      </Section>
 
-      {/* VALUE BLOCK 2: Quality & SLA */}
-      <Section>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          <FadeIn delay={100} variant="scale" className="order-2 lg:order-1">
-            <SLAViewMockup />
-          </FadeIn>
-          <div className="order-1 lg:order-2">
-            <FadeIn variant="none"><SectionLabel>Quality control</SectionLabel></FadeIn>
-            <FadeIn delay={80} variant="blur">
-              <h2 className="text-gradient text-[28px] sm:text-[48px] font-medium leading-[1.1] tracking-[-0.03em] max-w-[18ch]">
-                Track SLAs. Catch problems early.
-              </h2>
-            </FadeIn>
-            <FadeIn delay={160}>
-              <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[48ch]">
-                First response time, follow-up speed, missed conversations, and script compliance.
-                See quality metrics before they become lost deals.
-              </p>
-            </FadeIn>
-            <FadeIn delay={240}>
-              <div className="mt-8 flex flex-wrap gap-3">
-                {["First response SLA", "Follow-up SLA", "Missed follow-ups", "Script compliance"].map((tag) => (
-                  <span key={tag} className="text-[12px] text-white/30 bg-white/[0.04] px-3 py-1.5 rounded-full border border-white/[0.06]">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+            {/* Text content */}
+            <div className="relative z-10 max-w-[480px]">
+              <FadeIn variant="none"><SectionLabel>Deal visibility</SectionLabel></FadeIn>
+              <FadeIn delay={80} variant="blur">
+                <h2 className="text-gradient text-[28px] sm:text-[48px] font-medium leading-[1.1] tracking-[-0.03em] max-w-[18ch]">
+                  See every deal. Know who moves next.
+                </h2>
+              </FadeIn>
+              <FadeIn delay={160}>
+                <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[36ch]">
+                  Lead score, deal stage, deal health, and last action — all in one view.
+                </p>
+              </FadeIn>
+              <FadeIn delay={240}>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  {["Lead score", "Deal stage", "Deal health", "Last action"].map((tag) => (
+                    <span key={tag} className="text-[12px] text-white/30 bg-white/[0.04] px-3 py-1.5 rounded-full border border-white/[0.06]">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </FadeIn>
+            </div>
+
+            {/* Mobile mockup */}
+            <FadeIn delay={200} variant="scale" className="lg:hidden mt-10">
+              <PerspectiveFrame fadeDirection="bottom">
+                <DealVisibilityMockup />
+              </PerspectiveFrame>
             </FadeIn>
           </div>
         </div>
-      </Section>
+      </section>
+
+      {/* VALUE BLOCK 2: Quality & SLA - reversed */}
+      <section className="relative py-20 sm:py-28 overflow-hidden">
+        <div className="max-w-[1400px] mx-auto px-6 sm:px-10">
+          <div className="relative min-h-[400px] lg:min-h-[450px]">
+            {/* Mockup - positioned behind, from left */}
+            <FadeIn delay={200} variant="scale">
+              <div className="hidden lg:block absolute top-1/2 -translate-y-1/2 left-[-8%] right-[25%]">
+                <PerspectiveFrame fadeDirection="bottom">
+                  <SLAViewMockup />
+                </PerspectiveFrame>
+              </div>
+            </FadeIn>
+
+            {/* Text content - right side */}
+            <div className="relative z-10 max-w-[480px] lg:ml-auto">
+              <FadeIn variant="none"><SectionLabel>Quality control</SectionLabel></FadeIn>
+              <FadeIn delay={80} variant="blur">
+                <h2 className="text-gradient text-[28px] sm:text-[48px] font-medium leading-[1.1] tracking-[-0.03em] max-w-[18ch]">
+                  Track SLAs. Catch problems early.
+                </h2>
+              </FadeIn>
+              <FadeIn delay={160}>
+                <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[36ch]">
+                  First response time, follow-up speed, missed conversations, and script compliance.
+                </p>
+              </FadeIn>
+              <FadeIn delay={240}>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  {["First response SLA", "Follow-up SLA", "Missed follow-ups", "Script compliance"].map((tag) => (
+                    <span key={tag} className="text-[12px] text-white/30 bg-white/[0.04] px-3 py-1.5 rounded-full border border-white/[0.06]">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </FadeIn>
+            </div>
+
+            {/* Mobile mockup */}
+            <FadeIn delay={200} variant="scale" className="lg:hidden mt-10">
+              <PerspectiveFrame fadeDirection="bottom">
+                <SLAViewMockup />
+              </PerspectiveFrame>
+            </FadeIn>
+          </div>
+        </div>
+      </section>
 
       {/* VALUE BLOCK 3: Actions */}
-      <Section>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          <div>
-            <FadeIn variant="none"><SectionLabel>Smart actions</SectionLabel></FadeIn>
-            <FadeIn delay={80} variant="blur">
-              <h2 className="text-gradient text-[28px] sm:text-[48px] font-medium leading-[1.1] tracking-[-0.03em] max-w-[18ch]">
-                Know exactly what to do next.
-              </h2>
-            </FadeIn>
-            <FadeIn delay={160}>
-              <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[48ch]">
-                Priority queue, escalation flags, and weekly action plans.
-                Elio tells your team the next best step for every deal.
-              </p>
-            </FadeIn>
-            <FadeIn delay={240}>
-              <div className="mt-8 flex flex-wrap gap-3">
-                {["Next best step", "Priority queue", "Escalation flags", "Weekly plan"].map((tag) => (
-                  <span key={tag} className="text-[12px] text-white/30 bg-white/[0.04] px-3 py-1.5 rounded-full border border-white/[0.06]">
-                    {tag}
-                  </span>
-                ))}
+      <section className="relative py-20 sm:py-28 overflow-hidden">
+        <div className="max-w-[1400px] mx-auto px-6 sm:px-10">
+          <div className="relative min-h-[400px] lg:min-h-[450px]">
+            {/* Mockup - positioned behind */}
+            <FadeIn delay={200} variant="scale">
+              <div className="hidden lg:block absolute top-1/2 -translate-y-1/2 left-[25%] right-[-8%]">
+                <PerspectiveFrame fadeDirection="left-bottom">
+                  <ActionQueueMockup />
+                </PerspectiveFrame>
               </div>
             </FadeIn>
+
+            {/* Text content */}
+            <div className="relative z-10 max-w-[480px]">
+              <FadeIn variant="none"><SectionLabel>Smart actions</SectionLabel></FadeIn>
+              <FadeIn delay={80} variant="blur">
+                <h2 className="text-gradient text-[28px] sm:text-[48px] font-medium leading-[1.1] tracking-[-0.03em] max-w-[18ch]">
+                  Know exactly what to do next.
+                </h2>
+              </FadeIn>
+              <FadeIn delay={160}>
+                <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[36ch]">
+                  Priority queue, escalation flags, and weekly action plans for every deal.
+                </p>
+              </FadeIn>
+              <FadeIn delay={240}>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  {["Next best step", "Priority queue", "Escalation flags", "Weekly plan"].map((tag) => (
+                    <span key={tag} className="text-[12px] text-white/30 bg-white/[0.04] px-3 py-1.5 rounded-full border border-white/[0.06]">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </FadeIn>
+            </div>
+
+            {/* Mobile mockup */}
+            <FadeIn delay={200} variant="scale" className="lg:hidden mt-10">
+              <PerspectiveFrame fadeDirection="bottom">
+                <ActionQueueMockup />
+              </PerspectiveFrame>
+            </FadeIn>
           </div>
-          <FadeIn delay={300} variant="scale">
-            <ActionQueueMockup />
-          </FadeIn>
         </div>
-      </Section>
+      </section>
 
       {/* Deal impact overview */}
       <Section>
