@@ -1,0 +1,23 @@
+[Unit]
+Description=Elio Monitor - Bull Board UI + Worker
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/.claude/mcp-server
+ExecStart=/usr/bin/npx tsx src/monitor/cli.ts
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+# Logging
+StandardOutput=append:/root/.claude/logs/monitor.log
+StandardError=append:/root/.claude/logs/monitor-error.log
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target
