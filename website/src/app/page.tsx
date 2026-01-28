@@ -82,30 +82,39 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Meet Elio */}
-      <Section id="how">
-        <FadeIn variant="none">
-          <SectionLabel>Meet Elio</SectionLabel>
-        </FadeIn>
-        <FadeIn delay={100} variant="blur">
-          <h2 className="text-gradient text-[28px] sm:text-[48px] font-medium leading-[1.1] tracking-[-0.03em] max-w-[18ch]">
-            AI-powered deal assistant for real estate teams.
-          </h2>
-        </FadeIn>
-        <FadeIn delay={200}>
-          <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[48ch]">
-            Connects to WhatsApp conversations in real deals.
-            Shows where money is being made, delayed, or lost.
-          </p>
-        </FadeIn>
-        <FadeIn delay={300} variant="scale">
-          <div className="mt-14 sm:mt-20 pb-8">
-            <PerspectiveFrame>
-              <OwnerDashboardMockup />
-            </PerspectiveFrame>
+      {/* Meet Elio - Hero mockup layout */}
+      <section id="how" className="relative py-20 sm:py-32 overflow-hidden">
+        <div className="max-w-[1400px] mx-auto px-6 sm:px-10">
+          <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-8 lg:gap-0 items-center">
+            {/* Text content - left side */}
+            <div className="relative z-10 lg:pr-8">
+              <FadeIn variant="none">
+                <SectionLabel>Meet Elio</SectionLabel>
+              </FadeIn>
+              <FadeIn delay={100} variant="blur">
+                <h2 className="text-gradient text-[28px] sm:text-[48px] font-medium leading-[1.1] tracking-[-0.03em] max-w-[18ch]">
+                  AI-powered deal assistant for real estate teams.
+                </h2>
+              </FadeIn>
+              <FadeIn delay={200}>
+                <p className="mt-6 text-[16px] sm:text-[18px] text-white/40 leading-[1.6] max-w-[42ch]">
+                  Connects to WhatsApp conversations in real deals.
+                  Shows where money is being made, delayed, or lost.
+                </p>
+              </FadeIn>
+            </div>
+
+            {/* Mockup - right side, overlapping */}
+            <FadeIn delay={300} variant="scale">
+              <div className="relative lg:absolute lg:right-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[75%] lg:-mr-[15%]">
+                <PerspectiveFrame heroMode fadeDirection="left-bottom">
+                  <OwnerDashboardMockup />
+                </PerspectiveFrame>
+              </div>
+            </FadeIn>
           </div>
-        </FadeIn>
-      </Section>
+        </div>
+      </section>
 
       {/* VALUE BLOCK 1: Deal Visibility */}
       <Section>
