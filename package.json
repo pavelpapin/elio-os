@@ -16,7 +16,16 @@
     "test:integration": "pnpm --filter @elio/workflow test:integration",
     "health": "npx tsx scripts/health-check.ts",
     "verify": "pnpm build && pnpm test:integration && pnpm health",
-    "worker:start": "docker compose up -d redis && pnpm --filter @elio/worker start"
+    "worker:start": "docker compose up -d redis && pnpm --filter @elio/worker start",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:quick": "bash scripts/deploy.sh --skip-push",
+    "deploy:mcp": "bash scripts/update-mcp.sh",
+    "ship": "bash scripts/ship.sh",
+    "codegen:registry": "tsx scripts/codegen-registry.ts",
+    "validate:registry": "bash scripts/lint-registry.sh",
+    "validate:schema": "ajv-cli validate -s registry.schema.json -d registry.yaml",
+    "drift:detect": "tsx scripts/detect-registry-drift.ts",
+    "registry:check": "pnpm validate:schema && pnpm validate:registry && pnpm drift:detect"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

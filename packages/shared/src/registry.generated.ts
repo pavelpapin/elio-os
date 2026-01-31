@@ -2,7 +2,7 @@
  * AUTO-GENERATED from registry.yaml
  * DO NOT EDIT MANUALLY
  *
- * Generated at: 2026-01-31T07:34:31.623Z
+ * Generated at: 2026-01-31T07:43:01.885Z
  *
  * To regenerate:
  *   pnpm codegen:registry

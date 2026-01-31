@@ -86,4 +86,5 @@ main().catch(error => {
   process.exit(1);
 });
 
-export { search, SearchResponse, SearchOptions };
+export { search };
+export type { SearchResponse, SearchOptions };

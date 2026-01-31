@@ -66,6 +66,83 @@
 
 ---
 
+## ⚠️ CRITICAL: Registry-First Architecture
+
+**ПЕРЕД СОЗДАНИЕМ ЧЕГО-ЛИБО НОВОГО - ПРОВЕРЬ registry.yaml!**
+
+### Single Source of Truth
+
+`registry.yaml` - **ЕДИНСТВЕННЫЙ** источник правды о всех сущностях системы:
+- Workflows (все multi-stage процессы)
+- Skills (атомарные операции)
+- Connectors (MCP адаптеры к внешним сервисам)
+
+### Обязательные правила
+
+1. **НЕТ ЗАПИСИ В REGISTRY = НЕ СУЩЕСТВУЕТ**
+   - Сначала добавь в registry.yaml
+   - Потом создавай код/документацию
+
+2. **Автоматическая валидация**
+   - Pre-commit hook блокирует коммиты с ошибками
+   - Schema validation (JSON Schema)
+   - Drift detection каждые 6 часов
+
+3. **Type safety**
+   - registry.yaml → registry.generated.ts (auto-generated)
+   - TypeScript проверяет workflow IDs на compile-time
+   - Нет typos, нет runtime ошибок
+
+### Enforcement system (5 слоёв)
+
+```
+Layer 1: Schema validation (compile-time)    → Blocks invalid YAML
+Layer 2: Code generation (development-time)  → TypeScript types
+Layer 3: Drift detection (continuous, 6h)    → Telegram alerts
+Layer 4: Pre-commit hook                     → Blocks bad commits
+Layer 5: Runtime checks                      → Blocks deprecated workflows
+```
+
+### Как добавить новый workflow
+
+```bash
+# 1. СНАЧАЛА registry.yaml
+vim registry.yaml  # Добавить workflow metadata
+
+# 2. Регенерировать types (автоматически при commit)
+pnpm codegen:registry
+
+# 3. Создать код
+mkdir -p workflows/my-workflow packages/my-workflow/src
+cp workflows/_template/run.sh workflows/my-workflow/run.sh
+
+# 4. Commit (validation автоматически)
+git add .
+git commit -m "Add my-workflow"
+# → Pre-commit hook validates
+# → ✅ or ❌ с указанием ошибок
+```
+
+### Валидация вручную
+
+```bash
+# Full validation
+./scripts/lint-registry.sh
+
+# Schema only
+npx ajv-cli validate -s registry.schema.json -d registry.yaml
+
+# Drift detection
+npx tsx scripts/detect-registry-drift.ts
+
+# Regenerate types
+pnpm codegen:registry
+```
+
+**Документация:** См. `docs/ENFORCEMENT_SYSTEM.md` (560 lines)
+
+---
+
 ## Context Loading Strategy
 
 ### Level 1: Always Loaded

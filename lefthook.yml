@@ -10,6 +10,11 @@ pre-commit:
       exclude: "node_modules|dist|\\.d\\.ts|\\.test\\.ts|\\.spec\\.ts"
       run: |
         for file in {staged_files}; do
+          # Skip generated files
+          case "$file" in
+            *.generated.ts) continue ;;
+          esac
+
           lines=$(wc -l < "$file")
           if [ "$lines" -gt 200 ]; then
             echo "❌ $file exceeds 200-line limit ($lines lines)"
@@ -39,3 +44,13 @@ pre-commit:
     validate-registry:
       glob: "registry.yaml"
       run: npx tsx scripts/validate-registry.ts
+
+# Auto-rebuild MCP server if its source code changed
+post-commit:
+  commands:
+    rebuild-mcp:
+      glob: "mcp-server/src/**/*.ts"
+      run: |
+        echo "🔄 MCP server source changed, rebuilding..."
+        cd /root/.claude/mcp-server && pnpm build
+        echo "✓ MCP server rebuilt. Restart service: systemctl restart elio-mcp"
