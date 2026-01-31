@@ -1,6 +1,14 @@
 # =============================================================================
-# Elio OS — Registry v2.1
+# Elio OS — Registry v2.2
 # =============================================================================
+#
+# CHANGELOG v2.1 → v2.2 (2026-01-31):
+# - ✅ Added runtime replay safety enforcement (replay-guard.ts)
+# - ✅ Added state.location + checkpoints for all implemented workflows
+# - ✅ Added coordination section (locks, rate_limits, queues, shared_state)
+# - ✅ Added dedup_key_format for unsafe workflows
+# - ✅ Removed duplicate skill definitions (deep-research, system-review)
+# - ✅ Added observability: canRerun() method + elio_database_can_rerun tool
 #
 # ЕДИНСТВЕННЫЙ источник правды о всех сущностях системы.
 # Этот файл ОБЯЗАТЕЛЕН к прочтению ПЕРЕД созданием чего-либо нового.
@@ -169,15 +177,8 @@ skills:
       sound_id: "697c9c683612d1a940003890"
       sip_pbx: "941433"
 
-  deep-research:
-    description: "Skill-версия deep-research для ad-hoc исследования"
-    type: prompt-only
-    docs: skills/deep-research/SKILL.md
-
-  system-review:
-    description: "Skill-версия system-review для ручного аудита"
-    type: prompt-only
-    docs: skills/system-review/SKILL.md
+  # REMOVED: deep-research skill - use workflow deep-research instead
+  # REMOVED: system-review skill - use workflow system-review instead
 
 # -----------------------------------------------------------------------------
 # WORKFLOWS — multi-stage процессы
@@ -185,8 +186,8 @@ skills:
 workflows:
 
   system-review:
-    version: "1.1.0"
-    updated_at: "2026-01-30"
+    version: "1.2.0"
+    updated_at: "2026-01-31"
     description: "Ночной аудит системы: Collect -> Analyze -> Fix -> Split Files -> Verify -> Report"
     code: packages/system-review
     docs: workflows/system-review/WORKFLOW.md
@@ -198,15 +199,20 @@ workflows:
     side_effects: [git_commit, telegram_notify, file_modify]
     replay_safety: unsafe
     replay_guard: "Dedup by date in workflow_runs"
+    dedup_key_format: "date:YYYY-MM-DD"
     done_when: "verify stage passes, report delivered to Telegram"
+    state:
+      location: "redis://localhost:6379/workflow:system-review:{runId}"
+      checkpoints: [collect, analyze, fix, verify]
+      ttl: "7d"
     failure_model:
       retries: 1
       timeout: "6h"
       on_failure: telegram_notify
 
   deep-research:
-    version: "1.0.0"
-    updated_at: "2026-01-30"
+    version: "1.1.0"
+    updated_at: "2026-01-31"
     description: "Глубокое исследование темы с отчётом в Notion"
     code: packages/deep-research
     docs: workflows/deep-research/WORKFLOW.md
@@ -218,15 +224,20 @@ workflows:
     side_effects: [notion_page_create, telegram_notify, perplexity_api]
     replay_safety: unsafe
     replay_guard: "Dedup by topic hash in workflow_runs"
+    dedup_key_format: "topic_hash:sha256"
     done_when: "Notion page URL returned and verified accessible"
+    state:
+      location: "file://logs/workflows/deep-research/{runId}/state.json"
+      checkpoints: [planning, collection, synthesis, report]
+      ttl: "30d"
     failure_model:
       retries: 1
       timeout: "45m"
       on_failure: telegram_notify
 
   data-enrichment:
-    version: "1.0.0"
-    updated_at: "2026-01-30"
+    version: "1.1.0"
+    updated_at: "2026-01-31"
     description: "Обогащение данных CSV/JSON/Notion через внешние API с отчётом в Notion"
     code: packages/data-enrichment
     docs: workflows/data-enrichment/WORKFLOW.md
@@ -236,7 +247,12 @@ workflows:
     side_effects: [notion_page_create, telegram_notify, file_write]
     replay_safety: unsafe
     replay_guard: "Dedup by input_hash in workflow_runs"
+    dedup_key_format: "input_hash:sha256"
     done_when: "Export file generated and report in Notion"
+    state:
+      location: "file://logs/workflows/data-enrichment/{runId}/state.json"
+      checkpoints: [collection, validation, export]
+      ttl: "14d"
     failure_model:
       retries: 1
       timeout: "30m"
@@ -450,8 +466,37 @@ connectors:
 shared_packages:
   shared:
     path: packages/shared
-    description: "Unified logger (createLogger), notify(), rate-limiter, circuit-breaker, orchestrator, metrics. file-logger is deprecated shim."
-    exports: [createLogger, logger, setLevel, notify, createStore, ELIO_ROOT, paths, LOG_PATHS]
+    description: "Core utilities: logger, tracing, metrics, secrets, resilience (rate-limiter, circuit-breaker)"
+    exports:
+      # Logging & Tracing (v3.3.0)
+      - createLogger
+      - logger
+      - setLevel
+      - runWithTrace
+      - withSpan
+      - getCurrentTrace
+      - generateTraceId
+      # Metrics (v3.3.0)
+      - metrics
+      - workflowMetrics
+      - startMetricsServer
+      - stopMetricsServer
+      # Secrets (v3.3.0)
+      - getSecret
+      - getServiceConfig
+      - hasSecret
+      - getOAuthCredentials
+      # Resilience
+      - withRateLimit
+      - withCircuitBreaker
+      # Core
+      - notify
+      - createStore
+      - ELIO_ROOT
+      - paths
+    breaking_changes:
+      - "v3.3.0: traceId now automatic in all logs (JSON format recommended)"
+      - "v3.3.0: getSecret() prefers env vars over JSON files"
   clients:
     path: packages/clients
     description: "HTTP клиенты к внешним API (gmail, notion, telegram, etc.)"
@@ -471,8 +516,30 @@ shared_packages:
     exports: [AgentRunner, createClaudeRunner, BoundedAsyncQueue, ProcessHandle]
   workflow:
     path: packages/workflow
-    description: "BullMQ-based workflow orchestration и state management"
-    exports: [BullMQWorkflowClient, WorkflowHandle, WorkflowState]
+    description: "BullMQ-based workflow orchestration, state management, DLQ, retry configs (v3.3.0: transactional state)"
+    exports:
+      # Core
+      - BullMQWorkflowClient
+      - WorkflowHandle
+      - WorkflowState
+      # DLQ & Monitoring (v3.3.0)
+      - getDLQStats
+      - getDLQDepth
+      - checkDLQThresholds
+      - retryFailedJobs
+      # Cleanup (v3.3.0)
+      - cleanupOrphanedWorkflows
+      - getStateStats
+      # Retry Config (v3.3.0)
+      - getRetryConfig
+      - toBullMQOptions
+    features:
+      - "3-phase transactional commit (zero orphaned states)"
+      - "Per-workflow retry strategies with exponential backoff"
+      - "Dead Letter Queue monitoring"
+      - "Automatic cleanup of 'initializing' workflows >1min"
+    breaking_changes:
+      - "v3.3.0: Workflows now use 'initializing' state during startup"
   skills:
     path: packages/skills
     description: "Skills runtime (auto-test, smoke-test, brutal-audit, cleanup, etc.)"
@@ -557,3 +624,77 @@ standalone_scripts:
     description: "System health checker, auto-repair, seeder (checker.ts, repair.ts, seeder.ts, server.ts)"
     run: "npx tsx watchdog/server.ts"
     notes: "Standalone scripts, not a package. Uses direct file I/O, no shared deps."
+
+# -----------------------------------------------------------------------------
+# WORKFLOW COORDINATION
+# -----------------------------------------------------------------------------
+# Explicit dependencies and shared resources between workflows.
+# Makes inter-workflow boundaries visible and enforceable.
+coordination:
+  # File-based locks for critical sections
+  locks:
+    - name: "git-repo"
+      scope: global
+      used_by: [system-review, data-enrichment]
+      location: "/tmp/elio-git.lock"
+      notes: "Prevents concurrent git operations that could corrupt repository"
+    
+    - name: "system-review-daily"
+      scope: global
+      used_by: [system-review]
+      location: "/tmp/elio-system-review.lock"
+      notes: "Prevents multiple system-review runs simultaneously"
+    
+    - name: "deep-research"
+      scope: global
+      used_by: [deep-research]
+      location: "/tmp/elio-deep-research.lock"
+      notes: "Prevents concurrent research workflows"
+  
+  # Rate-limited shared resources
+  rate_limits:
+    - name: "notion-api"
+      scope: rate-limit
+      rate: "3/sec"
+      used_by: [deep-research, data-enrichment, meeting-prep, system-review]
+      notes: "Notion API rate limit enforcement"
+    
+    - name: "perplexity-api"
+      scope: rate-limit
+      rate: "30/min"
+      used_by: [deep-research]
+      notes: "Perplexity API rate limit (free tier)"
+    
+    - name: "telegram-api"
+      scope: rate-limit
+      rate: "30/sec"
+      used_by: [system-review, deep-research, data-enrichment, telegram-inbox]
+      notes: "Telegram Bot API rate limit"
+  
+  # Message queues and streams
+  queues:
+    - name: "telegram-notifications"
+      backend: "redis-stream"
+      consumers: [telegram-bot]
+      producers: [system-review, deep-research, data-enrichment]
+      notes: "Centralized notification queue to Telegram"
+    
+    - name: "workflow-output"
+      backend: "redis-stream"
+      consumers: [mcp-server, telegram-bot]
+      producers: [system-review, deep-research, data-enrichment]
+      notes: "Real-time workflow progress and output streaming"
+  
+  # Shared state resources
+  shared_state:
+    - name: "last-review-date"
+      location: "database:system_state:last_system_review"
+      readers: [system-review, day-review]
+      writers: [system-review]
+      notes: "Tracks when system-review last ran successfully"
+    
+    - name: "workflow-runs"
+      location: "database:workflow_runs"
+      readers: [all]
+      writers: [all]
+      notes: "Central workflow execution history for replay safety and observability"
