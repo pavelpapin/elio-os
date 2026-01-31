@@ -1,4 +1,5 @@
-const NOTION_KEY = "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";
+const NOTION_KEY = process.env.NOTION_KEY;
+if (!NOTION_KEY) throw new Error("NOTION_KEY environment variable is required");
 
 const idsToDelete = [
   "2f633fbf-b00e-8105-b26d-ffee9eec14fa", // Александр Калинкин - no TG/WA

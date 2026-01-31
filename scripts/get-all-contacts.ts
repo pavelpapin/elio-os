@@ -1,4 +1,5 @@
-const NOTION_KEY = "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";
+const NOTION_KEY = process.env.NOTION_KEY;
+if (!NOTION_KEY) throw new Error("NOTION_KEY environment variable is required");
 const DB_ID = "2f633fbfb00e8178bf12d3a1da03aff2";
 
 async function query(cursor?: string) {
