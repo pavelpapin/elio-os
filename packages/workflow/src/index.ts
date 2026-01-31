@@ -50,12 +50,16 @@ export { AgentNotificationService } from './notifications/index.js'
 
 // Cleanup utilities
 export {
-  cleanupOldWorkflows,
-  trimActiveStreams,
-  getCleanupStats,
-  startPeriodicCleanup,
+  cleanupOrphanedWorkflows,
+  type CleanupResult,
 } from './bullmq/cleanup.js'
-export type { CleanupStats } from './bullmq/cleanup.js'
+
+// Watchdog
+export {
+  runWatchdog,
+  startWatchdog,
+  type WatchdogResult,
+} from './watchdog.js'
 
 // Batched stream writer
 export {
@@ -91,6 +95,26 @@ export type {
   ProgressStage,
   ProgressReporterConfig,
 } from './progress/index.js'
+
+// Progress Adapter interface
+export type { ProgressAdapter } from './adapter.js'
+
+// Replay Safety
+export {
+  checkReplaySafety,
+  generateDedupKey,
+  forceAllowReplay,
+} from './replay-guard.js'
+
+// Workflow Registry
+export {
+  registerWorkflow,
+  getWorkflow,
+  getWorkflowStages,
+  hasWorkflow,
+  getRegisteredWorkflows,
+} from './registry.js'
+export type { WorkflowMeta, WorkflowModule } from './registry.js'
 
 // Errors
 export {

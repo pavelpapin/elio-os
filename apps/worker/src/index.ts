@@ -6,11 +6,14 @@
 import { createAgentExecutionWorker } from './workers/agentExecution.js'
 import { createScheduledTaskWorker } from './workers/scheduledTask.js'
 import { createSkillExecutionWorker } from './workers/skillExecution.js'
+import { validateStartup } from './health.js'
+import { startHealthAPI } from './api.js'
 import {
   checkRedisHealth,
   checkAllRedisHealth,
   closeAllConnections,
   cleanupOrphanedWorkflows,
+  startWatchdog,
 } from '@elio/workflow'
 
 // Environment config
@@ -34,15 +37,8 @@ async function main(): Promise<void> {
   console.log('[Worker] Starting Elio Worker...')
   console.log(`[Worker] Redis: ${config.host}:${config.port}`)
 
-  // Check Redis connections (all types)
-  const healthStatus = await checkAllRedisHealth()
-  console.log('[Worker] Redis health:', healthStatus)
-
-  if (!healthStatus.queue) {
-    console.error('[Worker] Redis queue connection not available, exiting...')
-    process.exit(1)
-  }
-  console.log('[Worker] Redis connections OK')
+  // Validate all dependencies before starting
+  await validateStartup()
 
   // Create workers
   const workers = [
@@ -75,12 +71,20 @@ async function main(): Promise<void> {
   }, 60 * 60 * 1000)
   console.log('[Worker] Periodic cleanup scheduled (hourly)')
 
+  // Start workflow watchdog (every 5 minutes)
+  const watchdogInterval = startWatchdog(5 * 60 * 1000)
+  console.log('[Worker] Watchdog started (checks every 5min)')
+
+  // Start health API for monitoring
+  startHealthAPI(9091)
+
   // Graceful shutdown
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`[Worker] Received ${signal}, shutting down...`)
 
-    // Stop periodic cleanup
+    // Stop periodic cleanup and watchdog
     clearInterval(cleanupInterval)
+    clearInterval(watchdogInterval)
 
     // Close all workers
     await Promise.all(workers.map(w => w.close()))
