@@ -8,6 +8,7 @@ import { execSync } from 'child_process'
 import * as memory from './managers/memory.js'
 import * as jobs from './managers/jobs.js'
 import * as skills from './managers/skills.js'
+import * as workflows from './managers/workflows.js'
 
 const colors = {
   reset: '\x1b[0m',
@@ -29,6 +30,9 @@ async function main(): Promise<void> {
   switch (command) {
     case 'skill':
       await handleSkill(args)
+      break
+    case 'workflow':
+      await handleWorkflow(args)
       break
     case 'job':
       await handleJob(args)
@@ -68,6 +72,35 @@ async function handleSkill(args: string[]): Promise<void> {
     })
 
     log('Skill completed', 'green')
+    console.log(result)
+  } catch (err) {
+    log(`Error: ${(err as Error).message}`, 'red')
+    process.exit(1)
+  }
+}
+
+async function handleWorkflow(args: string[]): Promise<void> {
+  const [name, ...wfArgs] = args
+
+  if (!name) {
+    log('Available workflows:', 'blue')
+    workflows.listWorkflows().forEach(w => log(`  - ${w.name}: ${w.description}`))
+    return
+  }
+
+  log(`Running workflow via BullMQ: ${name}`, 'blue')
+  try {
+    const result = await workflows.runWorkflowWithStream(name, wfArgs, (update) => {
+      if (update.type === 'output') {
+        console.log(update.content)
+      } else if (update.type === 'progress') {
+        log(`[Progress] ${update.content}`, 'cyan')
+      } else if (update.type === 'thinking') {
+        log(`[Thinking] ${update.content}`, 'dim')
+      }
+    })
+
+    log('Workflow completed', 'green')
     console.log(result)
   } catch (err) {
     log(`Error: ${(err as Error).message}`, 'red')
@@ -213,8 +246,9 @@ function showHelp(): void {
   log('Requires Redis and elio-worker service.', 'dim')
   log('')
   log('Commands:', 'yellow')
-  log('  elio skill [name] [args]    Run a skill (via queue)')
-  log('  elio job create <skill>     Create async job')
+  log('  elio skill [name] [args]       Run a skill (via queue)')
+  log('  elio workflow [name] [args]    Run a workflow (via queue)')
+  log('  elio job create <skill>        Create async job')
   log('  elio job run <id>           Run/resume job')
   log('  elio job status <id>        Check job status')
   log('  elio job list               List jobs')

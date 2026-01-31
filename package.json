@@ -20,12 +20,15 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.9.3",
     "tsx": "^4.0.0",
+    "typescript": "^5.9.3",
     "vitest": "^2.0.0"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "croner": "^9.0.0"
   }
 }

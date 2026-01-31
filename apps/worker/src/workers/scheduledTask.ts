@@ -6,6 +6,43 @@
 import { Worker, Job, Queue } from 'bullmq'
 import { getBullMQConnection } from '@elio/workflow'
 
+/**
+ * Check replay guard - prevent duplicate runs
+ */
+async function checkReplayGuard(workflowId: string): Promise<boolean> {
+  try {
+    // Dynamic import to avoid circular dependency
+    const { getDb } = await import('@elio/db')
+    const db = getDb()
+
+    const today = new Date().toISOString().split('T')[0]
+    const dedupKey = `${workflowId}:${today}`
+
+    // Check if workflow ran today
+    const existing = await db.workflow.list({
+      workflow_name: workflowId,
+      status: ['completed', 'running'],
+      limit: 1
+    })
+
+    // Check if any run today
+    if (existing.length > 0) {
+      const lastRun = new Date(existing[0].started_at)
+      const lastRunDate = lastRun.toISOString().split('T')[0]
+
+      if (lastRunDate === today) {
+        return false // Already ran today
+      }
+    }
+
+    return true // OK to run
+  } catch (err) {
+    // If DB check fails, allow run (fail open)
+    console.warn(`[ScheduledWorker] Replay guard check failed, allowing run:`, err)
+    return true
+  }
+}
+
 export interface ScheduledTaskParams {
   workflowId: string
   params: {
@@ -57,6 +94,15 @@ async function processScheduledTask(
   const { chatId, type } = params
 
   console.log(`[ScheduledWorker] Processing task`, { workflowId, type, chatId })
+
+  // Replay guard for workflows (check if already ran today)
+  if (type === 'workflow') {
+    const shouldRun = await checkReplayGuard(workflowId)
+    if (!shouldRun) {
+      console.log(`[ScheduledWorker] Replay guard: ${workflowId} already ran today, skipping`)
+      return { success: true, message: 'Skipped (replay guard)' }
+    }
+  }
 
   try {
     switch (type) {

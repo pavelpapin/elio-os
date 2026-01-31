@@ -89,7 +89,7 @@ async function callProvider(opts: LLMCallOptions): Promise<string> {
 }
 
 function callClaude(opts: LLMCallOptions): string {
-  const fullPrompt = `${opts.prompt}\n\n## INPUT\n${opts.input}\n\nReturn ONLY valid JSON, no markdown, no explanation.`;
+  const fullPrompt = `${opts.prompt}\n\n## INPUT\n${opts.input}\n\nReturn ONLY valid JSON matching the schema, no markdown, no explanation.`;
   const timeout = opts.timeoutMs ?? 300_000;
 
   // Write prompt to temp file to avoid shell escaping issues
@@ -98,10 +98,11 @@ function callClaude(opts: LLMCallOptions): string {
   writeFileSync(promptFile, fullPrompt, 'utf-8');
 
   try {
-    const result = execSync(
-      `sudo -u ${CLI_USER} claude --print --dangerously-skip-permissions --mcp-config ${escapeShell(MCP_CONFIG)} < ${escapeShell(promptFile)}`,
-      { encoding: 'utf-8', timeout, stdio: ['pipe', 'pipe', 'pipe'] },
-    );
+    // Don't use --json-schema flag due to Claude CLI bug with empty schemas
+    // Instead, rely on prompt instruction to return valid JSON
+    const cmd = `sudo -u ${CLI_USER} claude --print --dangerously-skip-permissions --output-format json --mcp-config ${escapeShell(MCP_CONFIG)} < ${escapeShell(promptFile)}`;
+
+    const result = execSync(cmd, { encoding: 'utf-8', timeout, stdio: ['pipe', 'pipe', 'pipe'] });
     return result.trim();
   } finally {
     try { execSync(`rm -rf ${escapeShell(tmpDir)}`); } catch { /* cleanup */ }

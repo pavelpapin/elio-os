@@ -1,21 +1,16 @@
 #!/bin/bash
-# Deep Research Workflow — BullMQ submission
-# Usage:
-#   ./run.sh "topic"                              # Start new research
-#   ./run.sh --resume <run_id>                    # Resume from crash
-#   ./run.sh --resume <run_id> --input file.json  # Resume with user input
-
+# Deep Research Workflow
 set -uo pipefail
 cd /root/.claude
 
-# Load environment
+# Environment
 [ -f "secrets/.env" ] && export $(grep -v '^#' secrets/.env | xargs 2>/dev/null) || true
 
-# Lock file
+# Lock
 LOCK="/tmp/elio-deep-research.lock"
 [ -f "$LOCK" ] && exit 1
 echo $$ > "$LOCK"
 trap "rm -f $LOCK" EXIT
 
-# Submit to BullMQ via elio CLI
+# Execute
 exec npx tsx elio/src/cli.ts workflow deep-research "$@"

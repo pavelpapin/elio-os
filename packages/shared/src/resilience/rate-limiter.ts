@@ -1,27 +1,39 @@
 /**
- * Rate Limiter
+ * Rate Limiter — Redis-backed
  * Prevents API overload with per-service limits
+ * State persisted in Redis for restart safety
  */
 
 import { createLogger } from '../logger.js';
 
 const logger = createLogger('rate-limiter');
 
+// Lazy-loaded Redis connection
+let redisClient: any = null;
+
+async function getRedis() {
+  if (!redisClient) {
+    try {
+      // Dynamic import to avoid circular dependency
+      const workflow = await import('@elio/workflow');
+      const { getStateConnection } = workflow as any;
+      if (getStateConnection) {
+        redisClient = getStateConnection();
+      } else {
+        return null;
+      }
+    } catch (err) {
+      logger.warn('Redis not available, falling back to in-memory rate limiting');
+      return null;
+    }
+  }
+  return redisClient;
+}
+
 export interface RateLimitConfig {
   requestsPerMinute: number;
   requestsPerDay?: number;
   strategy: 'queue' | 'fail' | 'delay';
-}
-
-interface ServiceState {
-  minuteRequests: number;
-  dayRequests: number;
-  minuteResetAt: number;
-  dayResetAt: number;
-  queue: Array<{
-    resolve: () => void;
-    reject: (error: Error) => void;
-  }>;
 }
 
 // Default limits for known services
@@ -38,129 +50,222 @@ const DEFAULT_LIMITS: Record<string, RateLimitConfig> = {
   groq: { requestsPerMinute: 30, strategy: 'queue' }
 };
 
-// Service states
-const states = new Map<string, ServiceState>();
+// Fallback in-memory state when Redis unavailable
+interface ServiceState {
+  minuteRequests: number;
+  dayRequests: number;
+  minuteResetAt: number;
+  dayResetAt: number;
+}
 
-function getState(service: string): ServiceState {
-  let state = states.get(service);
+const fallbackStates = new Map<string, ServiceState>();
+
+async function checkLimit(service: string, config: RateLimitConfig): Promise<{
+  allowed: boolean;
+  minuteCount: number;
+  dayCount: number;
+  waitTime?: number;
+}> {
+  const redis = await getRedis();
+
+  if (!redis) {
+    // Fallback to in-memory
+    return checkLimitInMemory(service, config);
+  }
+
+  const minuteKey = `ratelimit:${service}:minute`;
+  const dayKey = `ratelimit:${service}:day`;
+  const now = Date.now();
+
+  // Atomic increment with TTL
+  const pipeline = redis.pipeline();
+  pipeline.incr(minuteKey);
+  pipeline.ttl(minuteKey);
+  pipeline.incr(dayKey);
+  pipeline.ttl(dayKey);
+  const results = await pipeline.exec();
+
+  const minuteCount = results[0][1] as number;
+  const minuteTTL = results[1][1] as number;
+  const dayCount = results[2][1] as number;
+  const dayTTL = results[3][1] as number;
+
+  // Set TTL on first request
+  if (minuteTTL === -1) await redis.expire(minuteKey, 60);
+  if (dayTTL === -1) await redis.expire(dayKey, 86400);
+
+  // Check limits
+  const minuteExceeded = minuteCount > config.requestsPerMinute;
+  const dayExceeded = config.requestsPerDay && dayCount > config.requestsPerDay;
+
+  if (dayExceeded) {
+    const waitTime = dayTTL > 0 ? dayTTL * 1000 : 0;
+    return { allowed: false, minuteCount, dayCount, waitTime };
+  }
+
+  if (minuteExceeded) {
+    const waitTime = minuteTTL > 0 ? minuteTTL * 1000 : 0;
+    return { allowed: false, minuteCount, dayCount, waitTime };
+  }
+
+  return { allowed: true, minuteCount, dayCount };
+}
+
+function checkLimitInMemory(service: string, config: RateLimitConfig): {
+  allowed: boolean;
+  minuteCount: number;
+  dayCount: number;
+  waitTime?: number;
+} {
+  let state = fallbackStates.get(service);
+  const now = Date.now();
+
   if (!state) {
-    const now = Date.now();
     state = {
       minuteRequests: 0,
       dayRequests: 0,
       minuteResetAt: now + 60000,
       dayResetAt: now + 86400000,
-      queue: []
     };
-    states.set(service, state);
+    fallbackStates.set(service, state);
   }
 
-  const now = Date.now();
+  // Reset counters if expired
   if (now >= state.minuteResetAt) {
     state.minuteRequests = 0;
     state.minuteResetAt = now + 60000;
-    processQueue(service);
   }
   if (now >= state.dayResetAt) {
     state.dayRequests = 0;
     state.dayResetAt = now + 86400000;
   }
 
-  return state;
-}
+  state.minuteRequests++;
+  state.dayRequests++;
 
-function processQueue(service: string): void {
-  const state = states.get(service);
-  const config = DEFAULT_LIMITS[service];
-  if (!state || !config) return;
+  const minuteExceeded = state.minuteRequests > config.requestsPerMinute;
+  const dayExceeded = config.requestsPerDay && state.dayRequests > config.requestsPerDay;
 
-  while (state.queue.length > 0 && state.minuteRequests < config.requestsPerMinute) {
-    const item = state.queue.shift();
-    if (item) {
-      state.minuteRequests++;
-      state.dayRequests++;
-      item.resolve();
-    }
+  if (dayExceeded) {
+    return {
+      allowed: false,
+      minuteCount: state.minuteRequests,
+      dayCount: state.dayRequests,
+      waitTime: state.dayResetAt - now
+    };
   }
+
+  if (minuteExceeded) {
+    return {
+      allowed: false,
+      minuteCount: state.minuteRequests,
+      dayCount: state.dayRequests,
+      waitTime: state.minuteResetAt - now
+    };
+  }
+
+  return {
+    allowed: true,
+    minuteCount: state.minuteRequests,
+    dayCount: state.dayRequests
+  };
 }
 
 export async function acquire(service: string): Promise<void> {
   const config = DEFAULT_LIMITS[service] || { requestsPerMinute: 100, strategy: 'delay' };
-  const state = getState(service);
+  const result = await checkLimit(service, config);
 
-  if (config.requestsPerDay && state.dayRequests >= config.requestsPerDay) {
-    const error = `Daily rate limit exceeded for ${service}`;
-    logger.warn(error, { service, dayRequests: state.dayRequests });
+  if (!result.allowed) {
+    const isDaily = config.requestsPerDay && result.dayCount > config.requestsPerDay;
+    const limitType = isDaily ? 'daily' : 'minute';
+    const error = `${limitType} rate limit exceeded for ${service}`;
 
-    if (config.strategy === 'fail') {
-      throw new Error(error);
-    }
-
-    const waitTime = state.dayResetAt - Date.now();
-    await new Promise(resolve => setTimeout(resolve, Math.min(waitTime, 60000)));
-    return acquire(service);
-  }
-
-  if (state.minuteRequests >= config.requestsPerMinute) {
-    logger.debug(`Rate limit reached for ${service}`, {
-      minuteRequests: state.minuteRequests,
+    logger.warn(error, {
+      service,
+      minuteCount: result.minuteCount,
+      dayCount: result.dayCount,
       strategy: config.strategy
     });
 
     switch (config.strategy) {
       case 'fail':
-        throw new Error(`Rate limit exceeded for ${service}`);
+        throw new Error(error);
 
       case 'delay': {
-        const waitTime = state.minuteResetAt - Date.now();
-        if (waitTime > 0) {
-          logger.info(`Delaying ${service} request`, { waitTime });
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-        }
+        const waitTime = result.waitTime || 1000;
+        logger.info(`Delaying ${service} request`, { waitTime });
+        await new Promise(resolve => setTimeout(resolve, Math.min(waitTime, 60000)));
         return acquire(service);
       }
 
-      case 'queue':
-        return new Promise((resolve, reject) => {
-          state.queue.push({ resolve, reject });
-          logger.debug(`Queued ${service} request`, { queueLength: state.queue.length });
-        });
+      case 'queue': {
+        // For queue strategy, wait and retry
+        const waitTime = result.waitTime || 1000;
+        await new Promise(resolve => setTimeout(resolve, Math.min(waitTime, 60000)));
+        return acquire(service);
+      }
     }
   }
-
-  state.minuteRequests++;
-  state.dayRequests++;
 }
 
 export function release(_service: string): void {
   // No-op for now
 }
 
-export function getStatus(service: string): {
+export async function getStatus(service: string): Promise<{
   minuteRequests: number;
   minuteLimit: number;
   dayRequests: number;
   dayLimit: number | undefined;
-  queueLength: number;
   minuteResetIn: number;
-} {
+}> {
   const config = DEFAULT_LIMITS[service] || { requestsPerMinute: 100, strategy: 'delay' };
-  const state = getState(service);
+  const redis = await getRedis();
+
+  if (!redis) {
+    // Fallback
+    const state = fallbackStates.get(service);
+    if (!state) {
+      return {
+        minuteRequests: 0,
+        minuteLimit: config.requestsPerMinute,
+        dayRequests: 0,
+        dayLimit: config.requestsPerDay,
+        minuteResetIn: 0
+      };
+    }
+
+    return {
+      minuteRequests: state.minuteRequests,
+      minuteLimit: config.requestsPerMinute,
+      dayRequests: state.dayRequests,
+      dayLimit: config.requestsPerDay,
+      minuteResetIn: Math.max(0, state.minuteResetAt - Date.now())
+    };
+  }
+
+  const minuteKey = `ratelimit:${service}:minute`;
+  const dayKey = `ratelimit:${service}:day`;
+
+  const [minuteCount, minuteTTL, dayCount] = await Promise.all([
+    redis.get(minuteKey).then((v: string | null) => parseInt(v || '0', 10)),
+    redis.ttl(minuteKey),
+    redis.get(dayKey).then((v: string | null) => parseInt(v || '0', 10))
+  ]);
 
   return {
-    minuteRequests: state.minuteRequests,
+    minuteRequests: minuteCount,
     minuteLimit: config.requestsPerMinute,
-    dayRequests: state.dayRequests,
+    dayRequests: dayCount,
     dayLimit: config.requestsPerDay,
-    queueLength: state.queue.length,
-    minuteResetIn: Math.max(0, state.minuteResetAt - Date.now())
+    minuteResetIn: Math.max(0, minuteTTL * 1000)
   };
 }
 
-export function getAllStatus(): Record<string, ReturnType<typeof getStatus>> {
-  const result: Record<string, ReturnType<typeof getStatus>> = {};
+export async function getAllStatus(): Promise<Record<string, Awaited<ReturnType<typeof getStatus>>>> {
+  const result: Record<string, Awaited<ReturnType<typeof getStatus>>> = {};
   for (const service of Object.keys(DEFAULT_LIMITS)) {
-    result[service] = getStatus(service);
+    result[service] = await getStatus(service);
   }
   return result;
 }
@@ -177,6 +282,16 @@ export function configure(service: string, config: RateLimitConfig): void {
   logger.info(`Configured ${service}`, config);
 }
 
-export function resetLimits(): void {
-  states.clear();
+export async function resetLimits(): Promise<void> {
+  fallbackStates.clear();
+
+  const redis = await getRedis();
+  if (redis) {
+    // Clear all ratelimit:* keys from Redis
+    const keys = await redis.keys('ratelimit:*');
+    if (keys.length > 0) {
+      await redis.del(...keys);
+      logger.info(`Cleared ${keys.length} rate limit keys from Redis`);
+    }
+  }
 }

@@ -457,6 +457,10 @@ connectors:
     adapter: mcp-server/src/adapters/backlog
   community:
     adapter: mcp-server/src/adapters/community
+  product-review:
+    adapter: mcp-server/src/adapters/product-review
+    tools_prefix: elio_product_review
+    description: "Product quality review - analyzes feedback, errors, quality metrics"
 
 # -----------------------------------------------------------------------------
 # SHARED PACKAGES — библиотеки в packages/
