@@ -1,0 +1,129 @@
+/**
+ * Shared HTTP client utilities
+ */
+
+import * as https from 'https';
+import * as http from 'http';
+
+export interface HttpRequestOptions {
+  hostname: string;
+  port?: number;
+  path: string;
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  headers?: Record<string, string>;
+  body?: unknown;
+  timeout?: number;
+  protocol?: 'http' | 'https';
+}
+
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public response?: unknown
+  ) {
+    super(message);
+    this.name = 'HttpError';
+  }
+}
+
+/**
+ * Make an HTTP/HTTPS request and return parsed JSON response
+ */
+export async function httpRequest<T>(options: HttpRequestOptions): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const contentType = options.headers?.['Content-Type'] || 'application/json';
+    const isFormData = contentType.includes('x-www-form-urlencoded');
+    const isHttps = options.protocol !== 'http';
+    const httpModule = isHttps ? https : http;
+
+    const reqOptions: https.RequestOptions = {
+      hostname: options.hostname,
+      port: options.port || (isHttps ? 443 : 80),
+      path: options.path,
+      method: options.method || 'GET',
+      headers: {
+        'Content-Type': contentType,
+        ...options.headers,
+      },
+      timeout: options.timeout || 30000,
+    };
+
+    const req = httpModule.request(reqOptions, (res) => {
+      let data = '';
+      res.on('data', (chunk) => (data += chunk));
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (res.statusCode && res.statusCode >= 400) {
+            const msg = json.message || json.error?.message || JSON.stringify(json.error || json);
+            reject(new HttpError(`HTTP ${res.statusCode}: ${msg}`, res.statusCode, json));
+          } else if (json.error && typeof json.error === 'object') {
+            reject(new HttpError(json.error.message || JSON.stringify(json.error), res.statusCode, json));
+          } else {
+            resolve(json as T);
+          }
+        } catch {
+          if (res.statusCode && res.statusCode >= 400) {
+            reject(new HttpError(`HTTP ${res.statusCode}: ${data.slice(0, 200)}`, res.statusCode));
+          } else {
+            resolve(data as unknown as T);
+          }
+        }
+      });
+    });
+
+    req.on('error', (err) => reject(new HttpError(err.message)));
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new HttpError('Request timeout'));
+    });
+
+    if (options.body) {
+      const bodyStr = isFormData && typeof options.body === 'string'
+        ? options.body
+        : JSON.stringify(options.body);
+      req.write(bodyStr);
+    }
+    req.end();
+  });
+}
+
+/**
+ * Make a Google API request with authentication
+ */
+export async function googleApiRequest<T>(
+  service: string,
+  endpoint: string,
+  accessToken: string,
+  options: Partial<HttpRequestOptions> = {}
+): Promise<T> {
+  const hostname = service === 'drive'
+    ? 'www.googleapis.com'
+    : `${service}.googleapis.com`;
+
+  const path = service === 'drive'
+    ? `/drive/v3${endpoint}`
+    : `/v1${endpoint}`;
+
+  return httpRequest<T>({
+    hostname,
+    path,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...options.headers,
+    },
+    ...options,
+  });
+}
+
+/**
+ * Build URL query string from params
+ */
+export function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
+  const filtered = Object.entries(params)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+
+  return filtered.length > 0 ? `?${filtered.join('&')}` : '';
+}

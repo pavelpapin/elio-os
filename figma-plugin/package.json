@@ -1,0 +1,21 @@
+{
+  "name": "elio-figma-plugin",
+  "version": "1.0.0",
+  "description": "Elio Design Bridge - Create designs from AI prompts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/main.ts --outdir dist --target browser && cp src/ui.html dist/ui.html",
+    "watch": "bun build src/main.ts --outdir dist --target browser --watch",
+    "push": "npx tsx scripts/push-to-figma.ts",
+    "push:value": "npx tsx scripts/push-value-screens.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.100.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.0",
+    "typescript": "^5.4.0"
+  }
+}

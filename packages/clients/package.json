@@ -1,0 +1,55 @@
+{
+  "name": "@elio/clients",
+  "version": "1.0.0",
+  "description": "API clients for external services. Internal-only: groq (used by whisper adapter), supabase (used by sql adapter), utils (helpers)",
+  "main": "dist/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./brave": "./dist/brave/index.js",
+    "./calendar": "./dist/calendar/index.js",
+    "./community": "./dist/community/index.js",
+    "./docs": "./dist/docs/index.js",
+    "./exa": "./dist/exa/index.js",
+    "./github": "./dist/github/index.js",
+    "./gmail": "./dist/gmail/index.js",
+    "./grok": "./dist/grok/index.js",
+    "./groq": "./dist/groq/index.js",
+    "./linkedin": "./dist/linkedin/index.js",
+    "./n8n": "./dist/n8n/index.js",
+    "./notebooklm": "./dist/notebooklm/index.js",
+    "./notion": "./dist/notion/index.js",
+    "./perplexity": "./dist/perplexity/index.js",
+    "./scrapedo": "./dist/scrapedo/index.js",
+    "./semanticscholar": "./dist/semanticscholar/index.js",
+    "./serper": "./dist/serper/index.js",
+    "./sheets": "./dist/sheets/index.js",
+    "./slack": "./dist/slack/index.js",
+    "./supabase": "./dist/supabase/index.js",
+    "./tavily": "./dist/tavily/index.js",
+    "./telegram": "./dist/telegram/index.js",
+    "./twitter": "./dist/twitter/index.js",
+    "./webscraping": "./dist/webscraping/index.js",
+    "./youtube": "./dist/youtube/index.js",
+    "./anysite": "./dist/anysite/index.js",
+    "./utils": "./dist/utils/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@elio/shared": "workspace:*",
+    "@types/pg": "^8.16.0",
+    "pg": "^8.17.1",
+    "telegram": "^2.26.22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^3.0.0"
+  }
+}

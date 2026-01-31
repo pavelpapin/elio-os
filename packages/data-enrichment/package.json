@@ -1,0 +1,32 @@
+{
+  "name": "@elio/data-enrichment",
+  "version": "1.0.0",
+  "description": "Data enrichment workflow - enrich CSV/JSON/Notion data via external APIs",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@elio/shared": "workspace:*",
+    "@elio/workflow": "workspace:*",
+    "csv-parse": "^5.5.3",
+    "csv-stringify": "^6.4.5",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^2.0.0"
+  }
+}

@@ -1,0 +1,17 @@
+# Development overrides
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+version: '3.8'
+
+services:
+  redis:
+    ports:
+      - "6379:6379"
+
+  worker:
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=debug
+    volumes:
+      - /root/.claude:/root/.claude  # read-write in dev
+    deploy:
+      replicas: 1  # single worker in dev

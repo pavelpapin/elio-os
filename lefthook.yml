@@ -1,0 +1,41 @@
+# Lefthook pre-commit hooks
+# Enforces Elio OS coding standards on staged files
+# Install: npx lefthook install
+
+pre-commit:
+  parallel: true
+  commands:
+    file-size:
+      glob: "**/*.ts"
+      exclude: "node_modules|dist|\\.d\\.ts|\\.test\\.ts|\\.spec\\.ts"
+      run: |
+        for file in {staged_files}; do
+          lines=$(wc -l < "$file")
+          if [ "$lines" -gt 200 ]; then
+            echo "❌ $file exceeds 200-line limit ($lines lines)"
+            exit 1
+          fi
+        done
+      stage_fixed: true
+
+    no-export-default:
+      glob: "packages/**/*.ts"
+      exclude: "node_modules|dist|\\.d\\.ts"
+      run: |
+        if grep -l '^export default ' {staged_files} 2>/dev/null; then
+          echo "❌ export default is not allowed. Use named exports."
+          exit 1
+        fi
+
+    no-any-type:
+      glob: "packages/**/*.ts"
+      exclude: "node_modules|dist|\\.d\\.ts"
+      run: |
+        if grep -Pn ':\s*any\b|as\s+any\b' {staged_files} 2>/dev/null; then
+          echo "❌ 'any' type is not allowed. Use 'unknown' + type guards."
+          exit 1
+        fi
+
+    validate-registry:
+      glob: "registry.yaml"
+      run: npx tsx scripts/validate-registry.ts
