@@ -47,6 +47,8 @@ export function createInitialState(topic: string): PipelineState {
     max_iterations: 2,
     status: 'running',
     stage_outputs: {},
+    stage_attempts: {},
+    max_stage_attempts: 3,
   };
 }
 

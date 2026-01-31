@@ -13,7 +13,18 @@ export async function execute(state: PipelineState): Promise<unknown> {
   // Check if user already provided input (resume mode)
   const inputPath = `/root/.claude/logs/workflows/deep-research/${state.run_id}/user_input.json`;
   if (existsSync(inputPath)) {
-    const userInput = readFileSync(inputPath, 'utf-8');
+    let userInput = readFileSync(inputPath, 'utf-8');
+
+    // Unwrap {"answers": {...}} format if present
+    try {
+      const parsed = JSON.parse(userInput);
+      if (parsed.answers && typeof parsed.answers === 'object') {
+        userInput = JSON.stringify(parsed.answers);
+      }
+    } catch {
+      // If not valid JSON, use as-is
+    }
+
     const briefPrompt = `${prompt}\n\nThe user answered your discovery questions. Form a Research Brief JSON from their answers.`;
     return callLLM({
       provider: 'claude',

@@ -10,8 +10,9 @@ import { saveState, loadState, createInitialState } from './state.js';
 import { checkGate } from './gates.js';
 import { STAGE_NAMES } from './types.js';
 import type { PipelineState, StageName } from './types.js';
-import { PausedForInput } from './stages/discovery.js';
 import type { ProgressAdapter } from '@elio/workflow';
+import { executeStage, checkStageAttempts } from './stage-runner.js';
+import { saveStageOutput } from './result-merger.js';
 
 export type { ProgressAdapter };
 
@@ -31,10 +32,6 @@ export interface DeepResearchResult {
   error?: string;
 }
 
-/**
- * Execute deep research pipeline.
- * Called by BullMQ worker — all progress goes through the adapter.
- */
 export async function executeDeepResearch(
   params: DeepResearchParams,
   progress: ProgressAdapter,
@@ -86,41 +83,19 @@ async function runPipeline(
 
   for (let i = startIdx; i < STAGE_NAMES.length; i++) {
     const stage = STAGE_NAMES[i];
+
+    await checkStageAttempts(stage, state, progress);
     await progress.startStage(stage, `Stage ${i + 1}/${STAGE_NAMES.length}`);
 
-    let result: unknown;
-    try {
-      const mod = await import(`./stages/${stage.replace('_', '-')}.js`);
-      result = await mod.execute(state);
-    } catch (err) {
-      if (err instanceof PausedForInput || (err && typeof err === 'object' && 'questions' in err && err.constructor?.name === 'PausedForInput')) {
-        state.status = 'paused_for_input';
-        state.current_stage = stage;
-        saveState(state);
+    const runResult = await executeStage(stage, state, progress);
+    if (runResult.pausedForInput) return runResult.pausedForInput;
 
-        const questionsPath = `/root/.claude/logs/workflows/deep-research/${state.run_id}/questions.json`;
-        writeFileSync(questionsPath, JSON.stringify(err.questions, null, 2));
-
-        await progress.requestInput(JSON.stringify(err.questions));
-
-        return {
-          status: 'paused_for_input',
-          runId: state.run_id,
-          questions: err.questions,
-          resumeCommand: `elio job create workflow:deep-research --resume ${state.run_id} --input answers.json`,
-        };
-      }
-      await progress.failStage(stage, String(err));
-      throw err;
-    }
-
-    // Check gate
-    const gate = checkGate(stage, result, state);
+    const gate = checkGate(stage, runResult.result, state);
     if (!gate.passed) {
       if (stage === 'review' && gate.reason === 'needs_revision' && state.iteration < state.max_iterations) {
         await progress.log(`Review needs revision (iteration ${state.iteration + 1}/${state.max_iterations})`);
         state.iteration++;
-        state.stage_outputs.review = result as PipelineState['stage_outputs']['review'];
+        state.stage_outputs.review = runResult.result as PipelineState['stage_outputs']['review'];
         state.current_stage = 'synthesis';
         saveState(state);
         i = STAGE_NAMES.indexOf('synthesis') - 1;
@@ -130,36 +105,47 @@ async function runPipeline(
       throw new Error(`Gate failed at ${stage}: ${gate.reason}`);
     }
 
-    // Save stage output
-    (state.stage_outputs as Record<string, unknown>)[stage] = result;
+    await saveStageOutput(stage, runResult.result, state, progress);
     state.current_stage = (STAGE_NAMES[i + 1] as StageName) ?? 'done';
     saveState(state);
     await progress.completeStage(stage);
 
-    // Iterative deepening: after first synthesis, if gaps found, run targeted collection
     if (stage === 'synthesis' && state.iteration === 0) {
-      const synthesis = result as { gaps_for_deepdive?: string[] };
-      const gaps = synthesis.gaps_for_deepdive;
-      if (gaps && gaps.length > 0) {
-        await progress.log(`Deep dive: ${gaps.length} gaps identified, running targeted collection...`);
-        try {
-          const { executeTargetedCollection } = await import('./stages/collection.js');
-          const deepDiveResult = await executeTargetedCollection(state, gaps);
-          // Merge deep dive facts into existing collection
-          const existing = state.stage_outputs.collection;
-          if (existing && deepDiveResult) {
-            existing.agents.push(deepDiveResult as typeof existing.agents[number]);
-            saveState(state);
-          }
-          await progress.log('Deep dive collection complete, facts merged.');
-        } catch (err) {
-          await progress.log(`Deep dive failed (non-critical): ${String(err)}`);
-        }
-      }
+      await handleDeepDive(runResult.result, state, progress);
     }
   }
 
-  // Done
+  return completePipeline(state, progress);
+}
+
+async function handleDeepDive(
+  result: unknown,
+  state: PipelineState,
+  progress: ProgressAdapter,
+): Promise<void> {
+  const synthesis = result as { gaps_for_deepdive?: string[] };
+  const gaps = synthesis.gaps_for_deepdive;
+  if (!gaps || gaps.length === 0) return;
+
+  await progress.log(`Deep dive: ${gaps.length} gaps identified, running targeted collection...`);
+  try {
+    const { executeTargetedCollection } = await import('./stages/collection.js');
+    const deepDiveResult = await executeTargetedCollection(state, gaps);
+    const existing = state.stage_outputs.collection;
+    if (existing && deepDiveResult) {
+      existing.agents.push(deepDiveResult as typeof existing.agents[number]);
+      saveState(state);
+    }
+    await progress.log('Deep dive collection complete, facts merged.');
+  } catch (err) {
+    await progress.log(`Deep dive failed (non-critical): ${String(err)}`);
+  }
+}
+
+async function completePipeline(
+  state: PipelineState,
+  progress: ProgressAdapter,
+): Promise<DeepResearchResult> {
   state.status = 'completed';
   state.current_stage = 'done';
   saveState(state);

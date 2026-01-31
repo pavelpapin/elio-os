@@ -31,7 +31,18 @@ const COLLECTION_TOOLS = [
 export async function execute(state: PipelineState): Promise<unknown> {
   const plan = state.stage_outputs.planning!;
   const brief = state.stage_outputs.discovery!;
-  const agents = plan.agents;
+
+  // Skip agents that already completed (for crash recovery)
+  const existing = state.stage_outputs.collection?.agents || [];
+  const completedAgents = new Set(existing.map((a: { agent: string }) => a.agent));
+  const remainingAgents = plan.agents.filter((a: string) => !completedAgents.has(a));
+
+  if (remainingAgents.length === 0 && existing.length > 0) {
+    // All agents already completed, return existing results
+    return CollectionResultSchema.parse({ agents: existing });
+  }
+
+  const agents = remainingAgents.length > 0 ? remainingAgents : plan.agents;
 
   const context = JSON.stringify({
     topic: brief.topic,

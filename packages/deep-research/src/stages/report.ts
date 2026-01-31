@@ -9,6 +9,15 @@ import { ReportResultSchema } from '../types.js';
 import type { PipelineState } from '../types.js';
 
 export async function execute(state: PipelineState): Promise<unknown> {
+  // Idempotency guard: if report already created, verify and return
+  if (state.stage_outputs.report?.notion_url) {
+    const url = state.stage_outputs.report.notion_url;
+    if (!url.startsWith('file://')) {
+      console.log(`Report already exists: ${url}`);
+      return state.stage_outputs.report;
+    }
+  }
+
   const prompt = loadPrompt('report_editor.md');
   const brief = state.stage_outputs.discovery!;
   const synthesis = state.stage_outputs.synthesis!;

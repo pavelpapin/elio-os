@@ -39,12 +39,16 @@ export async function runConsilium(
     .map((r) => r.value);
 
   if (reviews.length === 0) {
-    // Total failure — approve by default to not block pipeline
+    // Total failure — force manual review instead of auto-approving
     return {
-      final_verdict: 'approved',
+      final_verdict: 'needs_revision',
       consensus_score: 0,
       model_scores: {},
-      critical_issues: [{ issue: 'All review models failed', found_by: ['system'] }],
+      critical_issues: [{
+        issue: 'CRITICAL: All review models failed - research not validated',
+        found_by: ['system']
+      }],
+      unified_tz: 'All review models failed. Manual review required before proceeding.',
     };
   }
 
