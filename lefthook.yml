@@ -45,12 +45,12 @@ pre-commit:
       glob: "{registry.yaml,workflows/**,skills/**,mcp-server/src/adapters/**}"
       run: bash scripts/lint-registry.sh
 
-# Auto-rebuild MCP server if its source code changed
-post-commit:
-  commands:
-    rebuild-mcp:
-      glob: "mcp-server/src/**/*.ts"
-      run: |
-        echo "🔄 MCP server source changed, rebuilding..."
-        cd /root/.claude/mcp-server && pnpm build
-        echo "✓ MCP server rebuilt. Restart service: systemctl restart elio-mcp"
+# Disabled: too aggressive, use 'pnpm deploy:mcp' instead
+# post-commit:
+#   commands:
+#     rebuild-mcp:
+#       glob: "mcp-server/src/**/*.ts"
+#       run: |
+#         echo "🔄 MCP server source changed, rebuilding..."
+#         cd /root/.claude/mcp-server && pnpm build
+#         echo "✓ MCP server rebuilt. Restart service: systemctl restart elio-mcp"
