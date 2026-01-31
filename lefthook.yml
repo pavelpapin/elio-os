@@ -42,8 +42,8 @@ pre-commit:
         fi
 
     validate-registry:
-      glob: "registry.yaml"
-      run: npx tsx scripts/validate-registry.ts
+      glob: "{registry.yaml,workflows/**,skills/**,mcp-server/src/adapters/**}"
+      run: bash scripts/lint-registry.sh
 
 # Auto-rebuild MCP server if its source code changed
 post-commit:
